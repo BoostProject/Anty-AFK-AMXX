@@ -11,6 +11,11 @@ https://github.com/BoostProject/Anty-AFK-AMXX/releases
 - AmxxEasyHttp https://github.com/Next21Team/AmxxEasyHttp/releases
 - Reapi https://github.com/s1lentq/reapi/releases
 
+# Includes
+- https://github.com/Next21Team/AmxxEasyHttp/blob/main/amxx/scripting/include/easy_http.inc
+- https://github.com/s1lentq/reapi/blob/master/reapi/extra/amxmodx/scripting/include/reapi.inc
+- https://github.com/OciXCrom/CromChat/blob/master/cromchat.inc
+
 # Cvars
 
 - boost_apikey - API Key which you can check [here](https://boostproject.pro/panel-serwerow)
@@ -38,6 +43,11 @@ https://github.com/BoostProject/Anty-AFK-AMXX/releases
 
 - AmxxEasyHttp https://github.com/Next21Team/AmxxEasyHttp/releases
 - Reapi https://github.com/s1lentq/reapi/releases
+
+# Includy
+- https://github.com/Next21Team/AmxxEasyHttp/blob/main/amxx/scripting/include/easy_http.inc
+- https://github.com/s1lentq/reapi/blob/master/reapi/extra/amxmodx/scripting/include/reapi.inc
+- https://github.com/OciXCrom/CromChat/blob/master/cromchat.inc
 
 # Zmienne (Cvars)
 
