@@ -22,7 +22,7 @@ static const URL_AUTHOR[] = "https://amxx4u.pl/";
 #define TIMER_UPDATE_API 934821
 #define TIMER_UPDATE_DATA 240.0 // Co ile sekund aktualizowac dane (API)
 
-new Float:spawn_posistion[3];
+new Float:spawn_position[MAX_PLAYERS+1][3];
 new bool:Checking[MAX_PLAYERS + 1];
 new AfkCounter[MAX_PLAYERS + 1];
 
@@ -114,8 +114,11 @@ public client_disconnected(id) {
 	get_user_authid(id, steamID, charsmax(steamID));
 }
 
-public ResetPlayer(id) {
-	spawn_posistion[id] = 0.0;
+public ResetPlayer(id) 
+{
+	spawn_position[id][0] = 0.0;
+    spawn_position[id][1] = 0.0;
+    spawn_position[id][2] = 0.0;
 
 	Checking[id] = false;
 
@@ -130,7 +133,7 @@ public player_spawn(id) {
 		return HC_CONTINUE;
 
 	new freezetime = get_cvar_num("mp_freezetime");
-	entity_get_vector(id, EV_VEC_origin, spawn_posistion);
+	entity_get_vector(id, EV_VEC_origin, spawn_position[id]);
 
 	set_task(config[TIMER_SPAWN] + freezetime, "Timer_CheckPlayer", id);
 	return HC_CONTINUE;
@@ -143,7 +146,7 @@ public Timer_CheckPlayer(id) {
 	new Float:CurrentPosition[3];
 	entity_get_vector(id, EV_VEC_origin, CurrentPosition);
 
-	if(get_distance_f(CurrentPosition, spawn_posistion) > 200.0)
+	if(get_distance_f(CurrentPosition, spawn_position[id]) > 200.0)
 		return PLUGIN_HANDLED;
 
 	AFK_CheckPlayer(id);
