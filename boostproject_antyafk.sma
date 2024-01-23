@@ -17,7 +17,7 @@ static const URL_AUTHOR[] = "https://amxx4u.pl/";
 	#define isPlayer(%1) ((1 <= %1 && %1 <= MAX_PLAYERS))
 #endif
 
-#define DEBUG_MODE 
+// #define DEBUG_MODE 
 
 #define TIMER_UPDATE_API 934821
 #define TIMER_UPDATE_DATA 240.0 // Co ile sekund aktualizowac dane (API)
@@ -117,8 +117,8 @@ public client_disconnected(id) {
 public ResetPlayer(id) 
 {
 	spawn_position[id][0] = 0.0;
-    spawn_position[id][1] = 0.0;
-    spawn_position[id][2] = 0.0;
+	spawn_position[id][1] = 0.0;
+	spawn_position[id][2] = 0.0;
 
 	Checking[id] = false;
 
@@ -277,6 +277,10 @@ public AFK_UpdateArray() {
 	new EzJSON:jsonPlayers = ezjson_init_array();
 	new team[12];
 
+	new EzHttpOptions:options_id = ezhttp_create_options()
+
+	ezhttp_option_set_header(options_id, "Content-Type", "application/json")
+
 	ForPlayers(i) {
 		if(!is_user_connected(i))
 			continue;
@@ -317,16 +321,16 @@ public AFK_UpdateArray() {
 
 	new data[3048];
 	ezjson_serial_to_string(jsonRoot, data, charsmax(data));
+	ezhttp_option_set_body(options_id, data)
 
 	#if defined DEBUG_MODE
 		log_amx("%s %s", PREFIX, data);
 	#endif
 
 	ezjson_free(jsonRoot);
-	ezhttp_post("http://api.boostproject.pro/plugin/send-data", "OnPlayersReceived");
-
-	CheckAPIConnection()
+	ezhttp_post("http://api.boostproject.pro/plugin/send-data", "OnPlayersReceived", options_id);
 }
+
 public OnPlayersReceived(EzHttpRequest: httpRequest) {
 	if(ezhttp_get_error_code(httpRequest) != EZH_OK) {
 		set_task(5.0, "Timer_UpdateApi");
@@ -361,24 +365,4 @@ public FindPlayerBySteamID(const sSteamID[]) {
 			return i;
 	}
 	return 0;
-}
-
-CheckAPIConnection()
-	ezhttp_get("http://api.boostproject.pro/plugin/send-data", "OnAPIResponse");
-
-public OnAPIResponse(EzHttpRequest: httpRequest) {
-	if(ezhttp_get_error_code(httpRequest) != EZH_OK) {
-		new error[64];
-		ezhttp_get_error_message(httpRequest, error, charsmax(error));
-
-		log_to_file(FILE_LOG, "%s Error connecting to API: %s", PREFIX, error);
-		server_print("%s Error connecting to API: %s", PREFIX, error);
-		return;
-	}
-
-	new data[2048];
-	if(ezhttp_get_user_data(httpRequest, data) > 0)
-		server_print("%s Odpowiedź z API: %s", PREFIX, data);
-	else
-		server_print("%s Nie odebrano danych z API.", PREFIX);
 }
