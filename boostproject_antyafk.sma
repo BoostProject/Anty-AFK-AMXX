@@ -39,9 +39,11 @@ enum _:AFK_CVARS {
 	Action
 };
 
-new Time[MAX_PLAYERS + 1][PLAYER_TIME];
-new SpectTime[MAX_PLAYERS + 1][PLAYER_TIME];
+new Time[MAX_PLAYERS+1][PLAYER_TIME];
+new SpectTime[MAX_PLAYERS+1][PLAYER_TIME];
+new ActiveBoostersSteamID[MAX_PLAYERS+1][MAX_AUTHID_LENGTH];
 new config[AFK_CVARS];
+new NumActiveBoosters = 0;
 
 static const MENU_TITLE[] = "\d[ # BoostProject :: Anty AFK #]^n\y[AFK]\w"
 static const MENU_PREFIX[] = "\d»\w"
@@ -140,7 +142,7 @@ public player_spawn(id) {
 }
 
 public Timer_CheckPlayer(id) {
-	if(!is_user_alive(id) || is_user_bot(id))
+	if(!is_user_alive(id) || is_user_bot(id) || !IsPlayerActiveBooster(id))
 		return PLUGIN_HANDLED;
 
 	new Float:CurrentPosition[3];
@@ -344,12 +346,29 @@ public OnPlayersReceived(EzHttpRequest: httpRequest) {
 	}
 
 	new data[2048];
-	while((ezhttp_get_user_data(httpRequest, data)) > 0) {
-		new EzJSON:jsonRoot = ezjson_parse(data);
+    NumActiveBoosters = 0;
 
-		if (jsonRoot == EzInvalid_JSON)
-			ezjson_free(jsonRoot);
-	}
+    while((ezhttp_get_user_data(httpRequest, data)) > 0) {
+        new EzJSON:jsonArray = ezjson_parse(data);
+
+        if (jsonArray == EzInvalid_JSON) {
+            ezjson_free(jsonArray);
+            continue;
+        }
+
+        if(ezjson_is_array(jsonArray)) {
+            new size = ezjson_array_get_count(jsonArray);
+            for(new i = 0; i < size; ++i) {
+                new EzJSON:jsonObject = ezjson_array_get_value(jsonArray, i);
+                if(ezjson_is_object(jsonObject)) {
+                    ezjson_object_get_string(jsonObject, "steamid64", ActiveBoostersSteamID[NumActiveBoosters], charsmax(ActiveBoostersSteamID[]));
+                    NumActiveBoosters++;
+                }
+                ezjson_free(jsonObject);
+            }
+        }
+        ezjson_free(jsonArray);
+    }
 }
 
 public FindPlayerBySteamID(const sSteamID[]) {
@@ -365,4 +384,16 @@ public FindPlayerBySteamID(const sSteamID[]) {
 			return i;
 	}
 	return 0;
+}
+
+public bool:IsPlayerActiveBooster(const id) 
+{
+	new steamID[MAX_AUTHID_LENGTH];
+	get_user_authid(id, steamID, charsmax(steamID));
+	for (new i = 0; i < NumActiveBoosters; ++i) 
+	{
+		if (equal(steamID, ActiveBoostersSteamID[i])) 
+			return true;
+	}
+	return false;
 }
