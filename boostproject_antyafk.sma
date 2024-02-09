@@ -363,19 +363,26 @@ public OnPlayersReceived(EzHttpRequest: httpRequest) {
             return;
         }
 
+        for(new i = 0; i < MAX_PLAYERS; ++i) {
+            formatex(ActiveBoostersSteamID[i], MAX_AUTHID_LENGTH, "");
+        }
+
         new EzJSON:dataArray = ezjson_object_get_value(responseJSON, "data");
+
         if(ezjson_is_array(dataArray)) {
             new size = ezjson_array_get_count(dataArray);
             for(new i = 0; i < size; ++i) {
                 new EzJSON:jsonObject = ezjson_array_get_value(dataArray, i);
                 if(ezjson_is_object(jsonObject)) {
-                    new steamID64[32];
+                    new steamid[32];
                     new msg[128];
-                    ezjson_object_get_string(jsonObject, "steamid64", steamID64, sizeof(steamID64));
+                    ezjson_object_get_string(jsonObject, "steamid", steamid, sizeof(steamid));
                     ezjson_object_get_string(jsonObject, "msg", msg, sizeof(msg));
 
-                    log_amx("Gracz %s: %s", steamID64, msg);
+                    log_amx("Gracz %s: %s", steamid, msg);
                     NumActiveBoosters++;
+
+                    formatex(ActiveBoostersSteamID[NumActiveBoosters], MAX_AUTHID_LENGTH, "%s", steamid);
                 }
                 ezjson_free(jsonObject);
             }
