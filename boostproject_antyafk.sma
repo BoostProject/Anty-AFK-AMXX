@@ -334,40 +334,54 @@ public AFK_UpdateArray() {
 }
 
 public OnPlayersReceived(EzHttpRequest: httpRequest) {
-	if(ezhttp_get_error_code(httpRequest) != EZH_OK) {
-		set_task(5.0, "Timer_UpdateApi");
+    if(ezhttp_get_error_code(httpRequest) != EZH_OK) {
+        set_task(5.0, "Timer_UpdateApi");
 
-		new error[64];
-		ezhttp_get_error_message(httpRequest, error, charsmax(error));
+        new error[64];
+        ezhttp_get_error_message(httpRequest, error, charsmax(error));
 
-		log_to_file(FILE_LOG, "%s Error connecting to API: %s", PREFIX, error);
-		server_print("%s Error connecting to API: %s", PREFIX, error);
-		return;
-	}
+        log_to_file(FILE_LOG, "%s Error connecting to API: %s", PREFIX, error);
+        server_print("%s Error connecting to API: %s", PREFIX, error);
+        return;
+    }
 
-	new data[2048];
+    new responseData[2048];
     NumActiveBoosters = 0;
 
-    while((ezhttp_get_user_data(httpRequest, data)) > 0) {
-        new EzJSON:jsonArray = ezjson_parse(data);
+    while((ezhttp_get_data(httpRequest, responseData, sizeof(responseData))) > 0) {
+        new EzJSON:responseJSON = ezjson_parse(responseData);
 
-        if (jsonArray == EzInvalid_JSON) {
-            ezjson_free(jsonArray);
+        if (responseJSON == EzInvalid_JSON) {
+            ezjson_free(responseJSON);
             continue;
         }
 
-        if(ezjson_is_array(jsonArray)) {
-            new size = ezjson_array_get_count(jsonArray);
+        new bool:success = ezjson_object_get_bool(responseJSON, "success");
+        if (!success) {
+            log_to_file(FILE_LOG, "%s API returned an error.", PREFIX);
+            ezjson_free(responseJSON);
+            return;
+        }
+
+        new EzJSON:dataArray = ezjson_object_get_value(responseJSON, "data");
+        if(ezjson_is_array(dataArray)) {
+            new size = ezjson_array_get_count(dataArray);
             for(new i = 0; i < size; ++i) {
-                new EzJSON:jsonObject = ezjson_array_get_value(jsonArray, i);
+                new EzJSON:jsonObject = ezjson_array_get_value(dataArray, i);
                 if(ezjson_is_object(jsonObject)) {
-                    ezjson_object_get_string(jsonObject, "steamid64", ActiveBoostersSteamID[NumActiveBoosters], charsmax(ActiveBoostersSteamID[]));
+                    new steamID64[32];
+                    new msg[128];
+                    ezjson_object_get_string(jsonObject, "steamid64", steamID64, sizeof(steamID64));
+                    ezjson_object_get_string(jsonObject, "msg", msg, sizeof(msg));
+
+                    log_amx("Gracz %s: %s", steamID64, msg);
                     NumActiveBoosters++;
                 }
                 ezjson_free(jsonObject);
             }
         }
-        ezjson_free(jsonArray);
+        ezjson_free(dataArray);
+        ezjson_free(responseJSON);
     }
 }
 
