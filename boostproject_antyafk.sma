@@ -5,7 +5,7 @@
 #include <easy_http>
 
 static const NAME[]		= "[CS 1.6] Anty AFK for BoostProject";
-static const VERSION[]	= "1.0.0";
+static const VERSION[]	= "1.0.1";
 static const AUTHOR[]	= "AMXX4u";
 static const URL_AUTHOR[] = "https://amxx4u.pl/";
 
@@ -333,88 +333,108 @@ public AFK_UpdateArray() {
 	ezhttp_post("http://api.boostproject.pro/plugin/send-data", "OnPlayersReceived", options_id);
 }
 
-public OnPlayersReceived(EzHttpRequest: httpRequest) {
-    if(ezhttp_get_error_code(httpRequest) != EZH_OK) {
-        set_task(5.0, "Timer_UpdateApi");
+public OnPlayersReceived(EzHttpRequest: httpRequest) 
+{
+	clearActiveBoosters();
 
-        new error[64];
-        ezhttp_get_error_message(httpRequest, error, charsmax(error));
+	if(ezhttp_get_error_code(httpRequest) != EZH_OK) {
+		set_task(5.0, "Timer_UpdateApi");
 
-        log_to_file(FILE_LOG, "%s Error connecting to API: %s", PREFIX, error);
-        server_print("%s Error connecting to API: %s", PREFIX, error);
-        return;
-    }
+		new error[64];
+		ezhttp_get_error_message(httpRequest, error, charsmax(error));
 
-    new responseData[2048];
-    NumActiveBoosters = 0;
+		log_to_file(FILE_LOG, "%s Error connecting to API: %s", PREFIX, error);
+		server_print("%s Error connecting to API: %s", PREFIX, error);
+		return;
+	}
 
-    while((ezhttp_get_data(httpRequest, responseData, sizeof(responseData))) > 0) {
-        new EzJSON:responseJSON = ezjson_parse(responseData);
+	new responseData[2048];
 
-        if (responseJSON == EzInvalid_JSON) {
-            ezjson_free(responseJSON);
-            continue;
-        }
+	while((ezhttp_get_data(httpRequest, responseData, sizeof(responseData))) > 0) {
+		new EzJSON:responseJSON = ezjson_parse(responseData);
 
-        new bool:success = ezjson_object_get_bool(responseJSON, "success");
-        if (!success) {
-            log_to_file(FILE_LOG, "%s API returned an error.", PREFIX);
-            ezjson_free(responseJSON);
-            return;
-        }
+		if (responseJSON == EzInvalid_JSON) {
+			ezjson_free(responseJSON);
+			continue;
+		}
 
-        for(new i = 0; i < MAX_PLAYERS; ++i) {
-            formatex(ActiveBoostersSteamID[i], MAX_AUTHID_LENGTH, "");
-        }
+		new bool:success = ezjson_object_get_bool(responseJSON, "success");
+		if (!success) 
+		{
+			log_to_file(FILE_LOG, "%s API returned an error.", PREFIX);
+			ezjson_free(responseJSON);
+			return;
+		}
 
-        new EzJSON:dataArray = ezjson_object_get_value(responseJSON, "data");
+		for(new i = 0; i < MAX_PLAYERS; ++i) {
+			formatex(ActiveBoostersSteamID[i], MAX_AUTHID_LENGTH, "");
+		}
 
-        if(ezjson_is_array(dataArray)) {
-            new size = ezjson_array_get_count(dataArray);
-            for(new i = 0; i < size; ++i) {
-                new EzJSON:jsonObject = ezjson_array_get_value(dataArray, i);
-                if(ezjson_is_object(jsonObject)) {
-                    new steamid[32];
-                    new msg[128];
-                    ezjson_object_get_string(jsonObject, "steamid", steamid, sizeof(steamid));
-                    ezjson_object_get_string(jsonObject, "msg", msg, sizeof(msg));
+		new EzJSON:dataArray = ezjson_object_get_value(responseJSON, "data");
 
-                    log_amx("Gracz %s: %s", steamid, msg);
-                    NumActiveBoosters++;
+		if(ezjson_is_array(dataArray)) {
+			new size = ezjson_array_get_count(dataArray);
+			for(new i = 0; i < size; ++i) {
+				new EzJSON:jsonObject = ezjson_array_get_value(dataArray, i);
+				if(ezjson_is_object(jsonObject)) {
+					new steamid[32];
+					new msg[128];
+					ezjson_object_get_string(jsonObject, "steamid64", steamid, sizeof(steamid));
+					ezjson_object_get_string(jsonObject, "msg", msg, sizeof(msg));
 
-                    formatex(ActiveBoostersSteamID[NumActiveBoosters], MAX_AUTHID_LENGTH, "%s", steamid);
-                }
-                ezjson_free(jsonObject);
-            }
-        }
-        ezjson_free(dataArray);
-        ezjson_free(responseJSON);
-    }
+					updateActiveBoosterList(steamid);
+					#if defined DEBUG_MODE
+					    log_amx("[BoostProject] Dodano boostera: %s", steamid);
+					#endif
+				}
+				ezjson_free(jsonObject);
+			}
+		}
+		ezjson_free(dataArray);
+		ezjson_free(responseJSON);
+	}
 }
 
-public FindPlayerBySteamID(const sSteamID[]) {
-	new sBuffer[MAX_AUTHID_LENGTH];
+public clearActiveBoosters() 
+{
+	NumActiveBoosters = 0;
 
-	ForPlayers(i) {
-		if(!is_user_connected(i))
-			continue;
+	ForPlayers(i)
+		format(ActiveBoostersSteamID[i], sizeof(ActiveBoostersSteamID[]), "");
+    
+	#if defined DEBUG_MODE
+	    log_amx("[BoostProject] Wyczyszczono liste aktywnych boosterow.");
+	#endif
+}
 
-		get_user_authid(i, sBuffer, charsmax(sBuffer));
+public updateActiveBoosterList(const steamid[]) 
+{
+    if (NumActiveBoosters < MAX_PLAYERS) 
+	{
+        copy(ActiveBoostersSteamID[NumActiveBoosters], charsmax(ActiveBoostersSteamID[]), steamid);
+        NumActiveBoosters++;
 
-		if(equal(sSteamID, sBuffer))
-			return i;
-	}
-	return 0;
+		#if defined DEBUG_MODE
+            log_amx("[BoostProject] Aktualizacja listy boosterow: %s", steamid);
+		#endif
+    } 
+	else 
+	{
+		#if defined DEBUG_MODE
+            log_amx("[BoostProject] Lista aktywnych boosterow jest pelna. Nie mozna dodac: %s", steamid);
+		#endif
+    }
 }
 
 public bool:IsPlayerActiveBooster(const id) 
 {
 	new steamID[MAX_AUTHID_LENGTH];
 	get_user_authid(id, steamID, charsmax(steamID));
-	for (new i = 0; i < NumActiveBoosters; ++i) 
-	{
-		if (equal(steamID, ActiveBoostersSteamID[i])) 
+
+	for (new i = 0; i < NumActiveBoosters; ++i) {
+		if (equal(steamID, ActiveBoostersSteamID[i])) {
 			return true;
+		}
 	}
 	return false;
 }
