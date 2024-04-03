@@ -20,7 +20,7 @@ static const URL_AUTHOR[] = "https://amxx4u.pl/";
 // #define DEBUG_MODE 
 
 #define TIMER_UPDATE_API 934821
-#define TIMER_UPDATE_DATA 240.0 // Co ile sekund aktualizowac dane (API)
+#define TIMER_UPDATE_DATA 60.0 // Co ile sekund aktualizowac dane (API)
 
 new Float:spawn_position[MAX_PLAYERS+1][3];
 new bool:Checking[MAX_PLAYERS + 1];
